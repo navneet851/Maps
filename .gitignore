@@ -17,3 +17,10 @@ captures
 !*.xcworkspace/contents.xcworkspacedata
 **/xcshareddata/WorkspaceSettings.xcsettings
 node_modules/
+
+# API Keys and sensitive configuration
+**/config.xml
+**/Config.plist
+**/*config*.properties
+api_keys.txt
+secrets.properties
