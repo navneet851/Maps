@@ -13,6 +13,7 @@ import com.route.maps.ui.MapView
 import com.route.maps.ui.components.NavigationBottomSheet
 import com.route.maps.viewmodel.MapViewModel
 import org.jetbrains.compose.ui.tooling.preview.Preview
+import kotlinx.coroutines.delay
 
 @Composable
 @Preview
@@ -23,7 +24,25 @@ fun App() {
         val pickupLocation by viewModel.pickupLocation.collectAsState()
         val destinationLocation by viewModel.destinationLocation.collectAsState()
         val currentLocation by viewModel.currentLocation.collectAsState()
+        val driverLocation by viewModel.driverLocation.collectAsState()
+        val routeProgress by viewModel.routeProgress.collectAsState()
         val isLoading by viewModel.isLoading.collectAsState()
+
+        // Simulate driver movement during navigation
+        LaunchedEffect(navigationState) {
+            if (navigationState is NavigationState.Navigating) {
+                val route = (navigationState as NavigationState.Navigating).route
+                if (route.polyline.isNotEmpty()) {
+                    // Simulate driver moving along route
+                    var currentIndex = 0
+                    while (currentIndex < route.polyline.size && navigationState is NavigationState.Navigating) {
+                        viewModel.updateDriverLocation(route.polyline[currentIndex])
+                        delay(2000) // Update every 2 seconds
+                        currentIndex++
+                    }
+                }
+            }
+        }
 
         Box(modifier = Modifier.fillMaxSize()) {
             // Map view
@@ -31,11 +50,13 @@ fun App() {
                 currentLocation = currentLocation,
                 pickupLocation = pickupLocation,
                 destinationLocation = destinationLocation,
+                driverLocation = driverLocation,
                 route = when (navigationState) {
                     is NavigationState.RouteCalculated -> (navigationState as NavigationState.RouteCalculated).route
                     is NavigationState.Navigating -> (navigationState as NavigationState.Navigating).route
                     else -> null
                 },
+                routeProgress = routeProgress,
                 onMapClick = { location ->
                     when (navigationState) {
                         NavigationState.Idle -> {

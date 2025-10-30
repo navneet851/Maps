@@ -14,9 +14,9 @@ import kotlinx.coroutines.launch
 /**
  * ViewModel for managing map and navigation state
  */
-class MapViewModel : ViewModel() {
+class MapViewModel(apiKey: String = "") : ViewModel() {
     
-    private val directionsService = DirectionsService()
+    private val directionsService = DirectionsService(apiKey)
     
     private val _navigationState = MutableStateFlow<NavigationState>(NavigationState.Idle)
     val navigationState: StateFlow<NavigationState> = _navigationState.asStateFlow()
@@ -30,8 +30,16 @@ class MapViewModel : ViewModel() {
     private val _currentLocation = MutableStateFlow(Location.DEFAULT)
     val currentLocation: StateFlow<Location> = _currentLocation.asStateFlow()
     
+    // Driver location (separate from user current location for Rapido-like experience)
+    private val _driverLocation = MutableStateFlow<Location?>(null)
+    val driverLocation: StateFlow<Location?> = _driverLocation.asStateFlow()
+    
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
+    
+    // Track how much of the route has been covered (0.0 to 1.0)
+    private val _routeProgress = MutableStateFlow(0f)
+    val routeProgress: StateFlow<Float> = _routeProgress.asStateFlow()
 
     /**
      * Sets the pickup location
@@ -54,6 +62,50 @@ class MapViewModel : ViewModel() {
      */
     fun updateCurrentLocation(location: Location) {
         _currentLocation.value = location
+    }
+    
+    /**
+     * Updates the driver location during navigation
+     */
+    fun updateDriverLocation(location: Location) {
+        _driverLocation.value = location
+        // Update route progress based on driver location
+        updateRouteProgress(location)
+    }
+    
+    /**
+     * Updates route progress based on driver location
+     */
+    private fun updateRouteProgress(driverLocation: Location) {
+        val state = _navigationState.value
+        if (state is NavigationState.Navigating) {
+            val route = state.route
+            if (route.polyline.isNotEmpty()) {
+                // Calculate progress based on distance from start
+                val totalDistance = route.distanceMeters.toFloat()
+                val startLocation = route.origin
+                val distanceTraveled = calculateDistanceMeters(startLocation, driverLocation)
+                _routeProgress.value = (distanceTraveled / totalDistance).coerceIn(0f, 1f)
+            }
+        }
+    }
+    
+    /**
+     * Calculate distance in meters between two locations
+     */
+    private fun calculateDistanceMeters(loc1: Location, loc2: Location): Float {
+        val earthRadius = 6371000f // meters
+        val dLat = Math.toRadians(loc2.latitude - loc1.latitude)
+        val dLon = Math.toRadians(loc2.longitude - loc1.longitude)
+        val lat1 = Math.toRadians(loc1.latitude)
+        val lat2 = Math.toRadians(loc2.latitude)
+
+        val a = kotlin.math.sin(dLat / 2) * kotlin.math.sin(dLat / 2) +
+                kotlin.math.sin(dLon / 2) * kotlin.math.sin(dLon / 2) *
+                kotlin.math.cos(lat1) * kotlin.math.cos(lat2)
+        val c = 2 * kotlin.math.atan2(kotlin.math.sqrt(a), kotlin.math.sqrt(1 - a))
+
+        return (earthRadius * c).toFloat()
     }
 
     /**
@@ -88,6 +140,9 @@ class MapViewModel : ViewModel() {
         val state = _navigationState.value
         if (state is NavigationState.RouteCalculated) {
             _navigationState.value = NavigationState.Navigating(state.route)
+            // Initialize driver at pickup location
+            _driverLocation.value = _pickupLocation.value ?: _currentLocation.value
+            _routeProgress.value = 0f
         }
     }
 
@@ -98,6 +153,8 @@ class MapViewModel : ViewModel() {
         _navigationState.value = NavigationState.Idle
         _pickupLocation.value = null
         _destinationLocation.value = null
+        _driverLocation.value = null
+        _routeProgress.value = 0f
     }
 
     /**
@@ -107,6 +164,8 @@ class MapViewModel : ViewModel() {
         _navigationState.value = NavigationState.Idle
         _pickupLocation.value = null
         _destinationLocation.value = null
+        _driverLocation.value = null
+        _routeProgress.value = 0f
     }
 
     override fun onCleared() {

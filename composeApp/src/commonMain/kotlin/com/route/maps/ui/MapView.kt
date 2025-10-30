@@ -14,7 +14,9 @@ expect fun MapView(
     currentLocation: Location,
     pickupLocation: Location?,
     destinationLocation: Location?,
+    driverLocation: Location?,
     route: Route?,
+    routeProgress: Float,
     onMapClick: (Location) -> Unit,
     modifier: Modifier = Modifier
 )
