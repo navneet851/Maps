@@ -8,6 +8,7 @@ import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.json.Json
 
 /**
@@ -164,7 +165,7 @@ private data class DirectionsResponse(
 @Serializable
 private data class DirectionRoute(
     val legs: List<RouteLeg>,
-    @Serializable(with = OverviewPolylineSerializer::class)
+    @SerialName("overview_polyline")
     val overviewPolyline: OverviewPolyline
 )
 
@@ -190,16 +191,3 @@ private data class Duration(
 private data class OverviewPolyline(
     val points: String
 )
-
-// Custom serializer for nested structure
-private object OverviewPolylineSerializer : kotlinx.serialization.KSerializer<OverviewPolyline> {
-    override val descriptor = kotlinx.serialization.descriptors.buildClassSerialDescriptor("OverviewPolyline")
-    
-    override fun serialize(encoder: kotlinx.serialization.encoding.Encoder, value: OverviewPolyline) {
-        encoder.encodeString(value.points)
-    }
-    
-    override fun deserialize(decoder: kotlinx.serialization.encoding.Decoder): OverviewPolyline {
-        return OverviewPolyline(decoder.decodeString())
-    }
-}

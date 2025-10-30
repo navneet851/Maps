@@ -5,6 +5,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.route.maps.model.Location
 import com.route.maps.model.NavigationState
@@ -61,7 +62,7 @@ fun App() {
                     },
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
-                        .padding(all = androidx.compose.ui.unit.dp(16.0f))
+                        .padding(16.dp)
                 ) {
                     Text("🗺️")
                 }
